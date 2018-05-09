@@ -5,8 +5,14 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.johnlpage.pocdriver.objects.CustomRecord;
+import com.johnlpage.pocdriver.objects.POCTestOptions;
+import com.johnlpage.pocdriver.objects.POCTestResults;
+import com.johnlpage.pocdriver.objects.TestRecord;
 import org.apache.commons.cli.ParseException;
+import org.apache.logging.log4j.Logger;
 import org.bson.BsonBinaryWriter;
+import org.bson.Document;
 import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.EncoderContext;
 import org.bson.io.BasicOutputBuffer;
@@ -14,12 +20,13 @@ import org.bson.io.BasicOutputBuffer;
 import java.util.logging.LogManager;
 
 public class POCDriver {
+    private static final Logger logger = org.apache.logging.log4j.LogManager.getLogger(POCDriver.class);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws java.text.ParseException {
 
         POCTestOptions testOpts;
         LogManager.getLogManager().reset();
-        System.out.println("MongoDB Proof Of Concept - Load Generator");
+        logger.info("MongoDB Proof Of Concept - Load Generator");
         try {
             testOpts = new POCTestOptions(args);
             // Quit after displaying help message
@@ -28,7 +35,7 @@ public class POCDriver {
             }
 
             if (testOpts.arrayupdates > 0 && (testOpts.arraytop < 1 || testOpts.arraynext < 1)) {
-                System.out.println("You must specify an array size to update arrays");
+                logger.error("You must specify an array size to update arrays");
                 return;
             }
             if (testOpts.printOnly) {
@@ -37,7 +44,7 @@ public class POCDriver {
             }
 
         } catch (ParseException e) {
-            System.err.println(e.getMessage());
+            logger.error(e.getMessage());
             return;
         }
 
@@ -46,18 +53,29 @@ public class POCDriver {
         runner.RunLoad(testOpts, testResults);
     }
 
-    private static void printTestDocument(final POCTestOptions testOpts) {
+    /**
+     * EK: updated this to use either TestRecord or CustomRecord
+     * @param testOpts all options for this load driver
+     */
+    private static void printTestDocument(final POCTestOptions testOpts) throws java.text.ParseException {
         //Sets up sample data don't remove
-        TestRecord tr;
         int[] arr = new int[2];
         arr[0] = testOpts.arraytop;
         arr[1] = testOpts.arraynext;
-        tr = new TestRecord(testOpts.numFields, testOpts.depth, testOpts.textFieldLen,
-                1, 12345678, testOpts.NUMBER_SIZE, arr, testOpts.blobSize);
-        //System.out.println(tr);
+
+        Document d;
+
+        if (testOpts.customtemplate!=null) { // use CustomRecord
+            CustomRecord cr = CustomRecord.getInstance(testOpts);
+            d = cr.getDoc(0, 0);
+        } else {
+            d = (new TestRecord(testOpts.numFields, testOpts.depth, testOpts.textFieldLen,
+                    1, 12345678, testOpts.NUMBER_SIZE, arr, testOpts.blobSize)).internalDoc;
+        }
+
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         JsonParser jp = new JsonParser();
-        JsonElement je = jp.parse(tr.internalDoc.toJson());
+        JsonElement je = jp.parse(d.toJson());
 
         String json = gson.toJson(je);
         StringBuilder newJson = new StringBuilder();
@@ -86,15 +104,15 @@ public class POCDriver {
             newJson.append(json.charAt(c));
         }
 
-        System.out.println(newJson.toString());
+        logger.info(newJson.toString());
 
         //Thanks to Ross Lawley for this bit of black magic
         BasicOutputBuffer buffer = new BasicOutputBuffer();
         BsonBinaryWriter binaryWriter = new BsonBinaryWriter(buffer);
-        new DocumentCodec().encode(binaryWriter, tr.internalDoc, EncoderContext.builder().build());
+        new DocumentCodec().encode(binaryWriter, d, EncoderContext.builder().build());
         int length = binaryWriter.getBsonOutput().getSize();
 
-        System.out.println(String.format("Records are %.2f KB each as BSON", (float) length / 1024));
+        logger.info(String.format("Records are %.2f KB each as BSON", (float) length / 1024));
     }
 
 }

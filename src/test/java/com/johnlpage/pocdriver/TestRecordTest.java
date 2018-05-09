@@ -1,5 +1,6 @@
 package com.johnlpage.pocdriver;
 
+import com.johnlpage.pocdriver.objects.TestRecord;
 import org.bson.Document;
 import org.bson.json.JsonMode;
 import org.bson.json.JsonWriterSettings;
