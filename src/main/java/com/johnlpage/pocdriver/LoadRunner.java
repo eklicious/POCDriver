@@ -68,48 +68,49 @@ class LoadRunner {
     }
 
     private void ConfigureSharding(POCTestOptions testOpts) {
-        MongoDatabase admindb = mongoClient.getDatabase("admin");
-        Document cr = admindb.runCommand(new Document("serverStatus", 1));
-        if (cr.getDouble("ok") == 0) {
-            logger.debug(cr.toJson());
-            return;
-        }
-
-        String procname = (String) cr.get("process");
-        if (procname != null && procname.contains("mongos")) {
-            testOpts.sharded = true;
-            //Turn the auto balancer off - good code rarely needs it running constantly
-            MongoDatabase configdb = mongoClient.getDatabase("config");
-            MongoCollection<Document> settings = configdb.getCollection("settings");
-            settings.updateOne(eq("_id", "balancer"), new Document("$set", new Document("stopped", true)));
-            try {
-                admindb.runCommand(new Document("enableSharding", testOpts.databaseName));
-            } catch (Exception e) {
-                if (!e.getMessage().contains("already enabled"))
-                    logger.error(e.getMessage());
-            }
-
-
-            try {
-                admindb.runCommand(new Document("shardCollection",
-                        testOpts.databaseName + "." + testOpts.collectionName).append("key", new Document("_id", 1)));
-            } catch (Exception e) {
-                if (!e.getMessage().contains("already"))
-                    logger.error(e.getMessage());
-            }
-
-
-            //See how many shards we have in the system - and get a list of their names
-            MongoCollection<Document> shards = configdb.getCollection("shards");
-            MongoCursor<Document> shardc = shards.find().iterator();
-            testOpts.numShards = 0;
-            while (shardc.hasNext()) {
-                shardc.next();
-                testOpts.numShards++;
-
-            }
-
-        }
+        // EK: Disable sharding reconfiguration...
+//        MongoDatabase admindb = mongoClient.getDatabase("admin");
+//        Document cr = admindb.runCommand(new Document("serverStatus", 1));
+//        if (cr.getDouble("ok") == 0) {
+//            logger.debug(cr.toJson());
+//            return;
+//        }
+//
+//        String procname = (String) cr.get("process");
+//        if (procname != null && procname.contains("mongos")) {
+//            testOpts.sharded = true;
+//            //Turn the auto balancer off - good code rarely needs it running constantly
+//            MongoDatabase configdb = mongoClient.getDatabase("config");
+//            MongoCollection<Document> settings = configdb.getCollection("settings");
+//            settings.updateOne(eq("_id", "balancer"), new Document("$set", new Document("stopped", true)));
+//            try {
+//                admindb.runCommand(new Document("enableSharding", testOpts.databaseName));
+//            } catch (Exception e) {
+//                if (!e.getMessage().contains("already enabled"))
+//                    logger.error(e.getMessage());
+//            }
+//
+//
+//            try {
+//                admindb.runCommand(new Document("shardCollection",
+//                        testOpts.databaseName + "." + testOpts.collectionName).append("key", new Document("_id", 1)));
+//            } catch (Exception e) {
+//                if (!e.getMessage().contains("already"))
+//                    logger.error(e.getMessage());
+//            }
+//
+//
+//            //See how many shards we have in the system - and get a list of their names
+//            MongoCollection<Document> shards = configdb.getCollection("shards");
+//            MongoCursor<Document> shardc = shards.find().iterator();
+//            testOpts.numShards = 0;
+//            while (shardc.hasNext()) {
+//                shardc.next();
+//                testOpts.numShards++;
+//
+//            }
+//
+//        }
     }
 
     void RunLoad(POCTestOptions testOpts, POCTestResults testResults) {
