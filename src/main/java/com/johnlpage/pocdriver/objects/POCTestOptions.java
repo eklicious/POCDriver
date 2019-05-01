@@ -51,6 +51,7 @@ public class POCTestOptions {
 	public int updateFields=1;
 	public int projectFields=0;
 	public String customtemplate = null;
+	public String fakertemplate = null;
 	public String customagg = null;
 
 	/**
@@ -111,6 +112,7 @@ public class POCTestOptions {
 		cliopt.addOption(null,"projectfields",true,"Number of fields to project in finds (default 0, which is no projection)");
 		cliopt.addOption(null,"debug",false,"Show more detail if exceptions occur during inserts/queries");
 		cliopt.addOption(null,"customtemplate",true,"Provide a custom document template. Custom queries is required for custom templates.");
+		cliopt.addOption(null,"fakertemplate",true,"Provide a faker document template. Custom queries is required for faker templates.");
 		cliopt.addOption(null,"customagg",true,"Provide a custom aggregation query in the form of pipe-delimited json docs for each stage of the agg pipeline");
 
 		CommandLine cmd = parser.parse(cliopt, args);
@@ -312,6 +314,12 @@ public class POCTestOptions {
 		{
 			logger.debug("Custom Template: " + cmd.getOptionValue("customtemplate"));
 			customtemplate = cmd.getOptionValue("customtemplate");
+		}
+
+		if(cmd.hasOption("fakertemplate"))
+		{
+			logger.debug("Faker Template: " + cmd.getOptionValue("fakertemplate"));
+			fakertemplate = cmd.getOptionValue("fakertemplate");
 		}
 
 		if(cmd.hasOption("customagg"))

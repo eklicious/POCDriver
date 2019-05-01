@@ -5,10 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import com.johnlpage.pocdriver.objects.CustomRecord;
-import com.johnlpage.pocdriver.objects.POCTestOptions;
-import com.johnlpage.pocdriver.objects.POCTestResults;
-import com.johnlpage.pocdriver.objects.TestRecord;
+import com.johnlpage.pocdriver.objects.*;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.Logger;
 import org.bson.BsonBinaryWriter;
@@ -22,7 +19,7 @@ import java.util.logging.LogManager;
 public class POCDriver {
     private static final Logger logger = org.apache.logging.log4j.LogManager.getLogger(POCDriver.class);
 
-    public static void main(String[] args) throws java.text.ParseException {
+    public static void main(String[] args) throws Exception {
 
         POCTestOptions testOpts;
         LogManager.getLogManager().reset();
@@ -57,7 +54,7 @@ public class POCDriver {
      * EK: updated this to use either TestRecord or CustomRecord
      * @param testOpts all options for this load driver
      */
-    private static void printTestDocument(final POCTestOptions testOpts) throws java.text.ParseException {
+    private static void printTestDocument(final POCTestOptions testOpts) throws Exception {
         //Sets up sample data don't remove
         int[] arr = new int[2];
         arr[0] = testOpts.arraytop;
@@ -68,6 +65,9 @@ public class POCDriver {
         if (testOpts.customtemplate!=null) { // use CustomRecord
             CustomRecord cr = CustomRecord.getInstance(testOpts);
             d = cr.getDoc(0, 0);
+        } else if (testOpts.fakertemplate!=null) { // use FakerRecord
+                FakerRecord fr = FakerRecord.getInstance(testOpts);
+                d = fr.getDoc(0, 0);
         } else {
             d = (new TestRecord(testOpts.numFields, testOpts.depth, testOpts.textFieldLen,
                     1, 12345678, testOpts.NUMBER_SIZE, arr, testOpts.blobSize)).internalDoc;

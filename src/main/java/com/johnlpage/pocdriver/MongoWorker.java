@@ -1,9 +1,6 @@
 package com.johnlpage.pocdriver;
 
-import com.johnlpage.pocdriver.objects.CustomRecord;
-import com.johnlpage.pocdriver.objects.POCTestOptions;
-import com.johnlpage.pocdriver.objects.POCTestResults;
-import com.johnlpage.pocdriver.objects.TestRecord;
+import com.johnlpage.pocdriver.objects.*;
 import com.mongodb.MongoClient;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.AggregateIterable;
@@ -411,11 +408,11 @@ public class MongoWorker implements Runnable {
         }
     }
 
-    private void updateSingleRecord(List<WriteModel<Document>> bulkWriter) throws ParseException {
+    private void updateSingleRecord(List<WriteModel<Document>> bulkWriter) throws Exception {
         updateSingleRecord(bulkWriter, null);
     }
 
-    private void updateSingleRecord(List<WriteModel<Document>> bulkWriter, Document key) throws ParseException {
+    private void updateSingleRecord(List<WriteModel<Document>> bulkWriter, Document key) throws Exception {
         logger.debug("############################ Update Single Query #################################");
         // Key Query
         rotateCollection();
@@ -439,6 +436,10 @@ public class MongoWorker implements Runnable {
         if (testOpts.customtemplate!=null) { // replace the whole existing doc with a new doc
             change = CustomRecord.getInstance(testOpts).getDoc(workerID, recordNo);
             logger.debug("Replacing custom template document");
+            bulkWriter.add(new ReplaceOneModel<Document>(query, change, (new UpdateOptions()).upsert(true)));
+        } else if (testOpts.fakertemplate!=null) { // replace the whole existing doc with a new doc
+            change = FakerRecord.getInstance(testOpts).getDoc(workerID, recordNo);
+            logger.debug("Replacing faker template document");
             bulkWriter.add(new ReplaceOneModel<Document>(query, change, (new UpdateOptions()).upsert(true)));
         } else { // do it the old way
             if (updateFields == 1) {
@@ -478,7 +479,7 @@ public class MongoWorker implements Runnable {
      * @param bulkWriter stores list of all operations
      * @return the document that got inserted
      */
-    private Document insertNewRecord(List<WriteModel<Document>> bulkWriter) throws ParseException {
+    private Document insertNewRecord(List<WriteModel<Document>> bulkWriter) throws Exception {
         logger.debug("############################ Insert new record #################################");
         Document d;
         sequence++;
@@ -486,6 +487,10 @@ public class MongoWorker implements Runnable {
             CustomRecord cr = CustomRecord.getInstance(testOpts);
             logger.debug("Sequence: " + sequence);
             d = cr.getDoc(workerID, sequence);
+        } else if (testOpts.fakertemplate!=null) {
+            FakerRecord fr = FakerRecord.getInstance(testOpts);
+            logger.debug("Sequence: " + sequence);
+            d = fr.getDoc(workerID, sequence);
         } else { // standard arbitrary document
             // This generates a new java document object each time
             d = createNewRecord().internalDoc;
