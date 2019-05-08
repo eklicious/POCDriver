@@ -80,8 +80,7 @@ public class FakerRecord {
      * We are going to use reflection to get some base object back from faker
      * @return a base json object, e.g. string or int or an array of base objs
      */
-    private Object getBaseObject(JsonObject objMeta)
-            throws java.text.ParseException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, Exception {
+    private Object getBaseObject(JsonObject objMeta) throws Exception {
         Object returnObj = null;
         Object baseObj = faker;
         Object tempObj = null; // store a temp object for the last method invocation so we don't overwrite the base object
@@ -262,8 +261,7 @@ public class FakerRecord {
      * Get a sample doc based on metaStructure object
      * @return return a bson document
      */
-    public Document getDoc(int workerId, int sequence)
-            throws java.text.ParseException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, Exception {
+    public Document getDoc(int workerId, int sequence) throws Exception {
         Document d = new Document();
 
         // add _id
@@ -280,13 +278,33 @@ public class FakerRecord {
             if (objMeta.has("doc")) { // we are only going 1 nested doc in...
                 JsonObject nestedMetaStructure = objMeta.get("doc").getAsJsonObject();
                 logger.debug("Nested Object found: " + nestedMetaStructure.toString());
-                Document nestedDoc = new Document();
-                for (Map.Entry<String, JsonElement> nestedValueEntry : nestedMetaStructure.entrySet()) {
-                    JsonObject nestedObjectMeta = nestedValueEntry.getValue().getAsJsonObject();
-                    logger.debug("- Nested Field Name: " + nestedValueEntry.getKey());
-                    nestedDoc.append(nestedValueEntry.getKey(), getBaseObject(nestedObjectMeta));
+                // Find out if there's an array or not... this is a bit cloogey
+                if (nestedMetaStructure.has("_cnt")) { // this is an array
+                    int cnt = nestedMetaStructure.get("_cnt").getAsInt();
+                    int randomArrayCnt = (int)getArrayCount(cnt);
+
+                    List<Document> docs = new ArrayList<Document>();
+                    for (int i=0; i<cnt; i++) {
+                        Document nestedDoc = new Document();
+                        for (Map.Entry<String, JsonElement> nestedValueEntry : nestedMetaStructure.entrySet()) {
+                            if (!nestedValueEntry.getKey().equalsIgnoreCase("_cnt")) { // skip _cnt
+                                JsonObject nestedObjectMeta = nestedValueEntry.getValue().getAsJsonObject();
+                                logger.debug("- Nested Field Name: " + nestedValueEntry.getKey());
+                                nestedDoc.append(nestedValueEntry.getKey(), getBaseObject(nestedObjectMeta));
+                            }
+                        }
+                        docs.add(nestedDoc);
+                    }
+                    d.append(valueEntry.getKey(), docs);
+                } else {
+                    Document nestedDoc = new Document();
+                    for (Map.Entry<String, JsonElement> nestedValueEntry : nestedMetaStructure.entrySet()) {
+                        JsonObject nestedObjectMeta = nestedValueEntry.getValue().getAsJsonObject();
+                        logger.debug("- Nested Field Name: " + nestedValueEntry.getKey());
+                        nestedDoc.append(nestedValueEntry.getKey(), getBaseObject(nestedObjectMeta));
+                    }
+                    d.append(valueEntry.getKey(), nestedDoc);
                 }
-                d.append(valueEntry.getKey(), nestedDoc);
             } else { // a faker object of some sort
                 d.append(valueEntry.getKey(), getBaseObject(objMeta));
             }
@@ -315,7 +333,7 @@ public class FakerRecord {
     }
 
     public static void main(String[] args)
-            throws ParseException, java.text.ParseException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, Exception {
+            throws Exception {
         logger.debug("Testing faker metastructure parsing");
 
         String name = faker.name().fullName(); // Miss Samanta Schmidt
@@ -366,12 +384,8 @@ public class FakerRecord {
         sampleMetastructureJson.append("multidbl: {\"number.randomDouble(3,0,100)\":5}, ");
         sampleMetastructureJson.append("singledt: {\"date.birthday\":1}, ");
         sampleMetastructureJson.append("multidt: {\"date.birthday\":3}, ");
-        sampleMetastructureJson.append("phones: {doc:{type:{\"number.randomDigit\":1}, val:{\"phoneNumber.phoneNumber\":1}}} ");
-//        sampleMetastructureJson.append("nicknames: {str:[3,10,1,2]}, ");
-//        sampleMetastructureJson.append("age: {int:[0,100]}, ");
-//        sampleMetastructureJson.append("favoritenumbers: {int:[0,100,3]}, ");
-//        sampleMetastructureJson.append("birthdate: {dt:[\"1940-01-01 14:05:09\",\"2000-11-14 14:05:09\"]}, ");
-//        sampleMetastructureJson.append("phones: {doc:{type:{str:[7,10]},number:{int:[2011234567,2019759876]},randomarray:{int:[2,9,3,4]}}}"); // phones: [{type:"home",number:"123456"}]
+        sampleMetastructureJson.append("phones: {doc:{type:{\"number.randomDigit\":1}, val:{\"phoneNumber.phoneNumber\":1}}}, ");
+        sampleMetastructureJson.append("productsArray: {doc:{nm:{\"commerce.product_name\":1}, price:{\"commerce.price\":1}, _cnt:3}} ");
         sampleMetastructureJson.append("}");
         logger.debug("sampleMetastructureJson: " + sampleMetastructureJson.toString());
 
@@ -383,6 +397,8 @@ public class FakerRecord {
         FakerRecord fr = FakerRecord.getInstance(o);
 
         logger.debug("Sample Doc: " + fr.getDoc(1, 1).toJson());
+
+        System.exit(1);
 
         MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb://localhost:27017"));
         MongoDatabase db = mongoClient.getDatabase("POCDB");
