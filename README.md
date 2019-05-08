@@ -1,10 +1,10 @@
 ***NOTE***
-Recently upgraded to MongoDB 3.6.x Driver.
+Added ability to specify custom document templates to match the expected target document model as closely as possible. Also, added the ability to run custom aggregation framework queries to better match query use cases.
 
 Introduction
 ------------
 This is open source, immature, and undoubtedly buggy code - if you find bugs fix them and send me a pull request or let me know (johnlpage@gmail.com)
- 
+
 This tool is to make it easy to answer many of the questions people have during a MongoDB 'Proof of Concept'
 
 * How fast will it be on my hardware.
@@ -36,7 +36,7 @@ and you will find POCDriver.jar in bin folder.
 Basic usage
 -----------
 
-If run with no arguments POCDriver will insert records onto a mongoDB running on localhost as quickly as possible. 
+If run with no arguments POCDriver will insert records onto a mongoDB running on localhost as quickly as possible.
 There will be only the _id index and records will have 10 fields.
 
 Use --print to see what the records look like.
@@ -71,10 +71,13 @@ Complex operations
  -g update a random value in the array (must have arrays enabled)
  -v perform sets of operations on a stack so -v iuu will insert then update that record twice -v kui will find a record then update it then insert a new one. the last record is placed on a stack and p pops it off so
      -v kiippu  Finds a record, adds two, then pops them off and updates the original one found.
+ -customagg Specify a custom aggregation framework query. All stages of the aggregation pipeline are represented as json and each stage is pipe-delimited. An example is as follows (note that the query needs to run against a known customtemplate where you can explicitly define fields):
+"{$match: { \"recordInfo.recordSizeBytes\": {$lt: 700}}}|{$project: {_id:0, recordSizeBytes:\"$recordInfo.recordSizeBytes\", expirationYear: {$year:\"$documentAudit.expirationDatetime\"}}}|{$group: {_id: \"$expirationYear\", totalBytes: {$sum: 1}}}"
+Note: To execute the custom agg, you need to add an 'a' parameter to -v
  ```
- 
+
  Note: If you specify a workflow via the `-v` flag, the basic operations above will be ignored and the operations listed will be performed instead.
- 
+
 Control options
 ---------------
 ```
@@ -99,6 +102,21 @@ Record shape options
 -f aside from arrays and _id add f fields to the record, after the first 3 every third is an integer, every fifth a date, the rest are text.
 -l how many characters to have in the text fields
 --depth The depth of the document to create.
+--customtemplate json representation of the document you'd like to dynamically create. You can specify the field name, object type, min/max length of object, # of array elements of the object, and the ability to do nested documents 1 level deep of everything above. Data types currently supported are string, int, date. Below is an example (includes line breaks which may or may not work as an input parameter):
+{
+  firstname: {str:[7,10]},
+  nicknames: {str:[3,10,1,2]},
+  age: {int:[0,100]},
+  favoritenumbers: {int:[0,100,3]},
+  birthdate: {dt:[\"1940-01-01 14:05:09\",\"2000-11-14 14:05:09\"]},
+  phones: {doc:{type:{str:[7,10]},number:{int:[2011234567,2019759876]},randomarray:{int:[2,9,3,4]}}}
+}
+Notes:
+str:[min,max] = min/max length of string
+str:[min,max,array_elements] = min/max length of string and how many array elements
+str:[min,max,min_array_elements,max_array_elements] = min/max length of string and min/max array elements
+The above applies to all other object types too.
+When you specify "doc", it indicates a nested document containing more base objects and/or array of base objects.
 ```
 
 Example
@@ -137,21 +155,21 @@ MongoDB Proof Of Concept - Load Generator
 MacPro:POCDriver jlp$ java -jar POCDriver.jar -k 20 -i 10 -u 10 -b 20
 MongoDB Proof Of Concept - Load Generator
 ------------------------
-After 10 seconds, 20016 new records inserted - collection has 89733 in total 
+After 10 seconds, 20016 new records inserted - collection has 89733 in total
 1925 inserts per second since last report 99.75 % in under 50 milliseconds
 3852 keyqueries per second since last report 99.99 % in under 50 milliseconds
 1949 updates per second since last report 99.84 % in under 50 milliseconds
 0 rangequeries per second since last report 100.00 % in under 50 milliseconds
 
 ------------------------
-After 20 seconds, 53785 new records inserted - collection has 123502 in total 
+After 20 seconds, 53785 new records inserted - collection has 123502 in total
 3377 inserts per second since last report 99.91 % in under 50 milliseconds
 6681 keyqueries per second since last report 99.99 % in under 50 milliseconds
 3322 updates per second since last report 99.94 % in under 50 milliseconds
 0 rangequeries per second since last report 100.00 % in under 50 milliseconds
 
 ------------------------
-After 30 seconds, 69511 new records inserted - collection has 139228 in total 
+After 30 seconds, 69511 new records inserted - collection has 139228 in total
 1571 inserts per second since last report 99.92 % in under 50 milliseconds
 3139 keyqueries per second since last report 99.99 % in under 50 milliseconds
 1595 updates per second since last report 99.94 % in under 50 milliseconds
@@ -173,4 +191,4 @@ Requirements to Build
 Troubleshooting
 ---------------
 
-If you are running a mongod with `--auth` enabled, you must pass a user and password with read/write and replSetGetStatus privileges, e.g. `readWriteAnyDatabase` and `clusterMonitor` roles.  
+If you are running a mongod with `--auth` enabled, you must pass a user and password with read/write and replSetGetStatus privileges, e.g. `readWriteAnyDatabase` and `clusterMonitor` roles.
