@@ -59,10 +59,12 @@ Client options
 Basic operations.
 -----------------
 ```
- -k Fetch a single record using it's primary key
- -r fetch a range of 10 records
- -u increment an integer field in a random record
- -i add a new record
+ k Fetch a single record using it's primary key
+ r fetch a range of 10 records
+ p pop identities off of the stack used for fetching records by id
+ u increment an integer field in a random record
+ i add a new record
+ a run a custom agg query specified by -customagg
 ```
 
 Complex operations
@@ -71,7 +73,7 @@ Complex operations
  -g update a random value in the array (must have arrays enabled)
  -v perform sets of operations on a stack so -v iuu will insert then update that record twice -v kui will find a record then update it then insert a new one. the last record is placed on a stack and p pops it off so
      -v kiippu  Finds a record, adds two, then pops them off and updates the original one found.
- --customagg Specify a custom aggregation framework query. All stages of the aggregation pipeline are represented as json and each stage is pipe-delimited. An example is as follows (note that the query needs to run against a known customtemplate where you can explicitly define fields):
+ -customagg Specify a custom aggregation framework query. All stages of the aggregation pipeline are represented as json and each stage is pipe-delimited. An example is as follows (note that the query needs to run against a known customtemplate where you can explicitly define fields):
 "{$match: { \"recordInfo.recordSizeBytes\": {$lt: 700}}}|{$project: {_id:0, recordSizeBytes:\"$recordInfo.recordSizeBytes\", expirationYear: {$year:\"$documentAudit.expirationDatetime\"}}}|{$group: {_id: \"$expirationYear\", totalBytes: {$sum: 1}}}"
 Note: To execute the custom agg, you need to add an 'a' parameter to -v
  ```
