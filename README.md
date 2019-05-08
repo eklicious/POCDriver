@@ -1,5 +1,5 @@
 ***NOTE***
-Added ability to specify custom document templates to match the expected target document model as closely as possible. Also, added the ability to run custom aggregation framework queries to better match query use cases.
+Added ability to specify custom document templates (--customtemplate parameter) to match the expected target document model as closely as possible. Also, added the ability to run custom aggregation framework queries (--customagg parameter) to better match query use cases, e.g. collection scans.
 
 Introduction
 ------------
@@ -71,7 +71,7 @@ Complex operations
  -g update a random value in the array (must have arrays enabled)
  -v perform sets of operations on a stack so -v iuu will insert then update that record twice -v kui will find a record then update it then insert a new one. the last record is placed on a stack and p pops it off so
      -v kiippu  Finds a record, adds two, then pops them off and updates the original one found.
- -customagg Specify a custom aggregation framework query. All stages of the aggregation pipeline are represented as json and each stage is pipe-delimited. An example is as follows (note that the query needs to run against a known customtemplate where you can explicitly define fields):
+ --customagg Specify a custom aggregation framework query. All stages of the aggregation pipeline are represented as json and each stage is pipe-delimited. An example is as follows (note that the query needs to run against a known customtemplate where you can explicitly define fields):
 "{$match: { \"recordInfo.recordSizeBytes\": {$lt: 700}}}|{$project: {_id:0, recordSizeBytes:\"$recordInfo.recordSizeBytes\", expirationYear: {$year:\"$documentAudit.expirationDatetime\"}}}|{$group: {_id: \"$expirationYear\", totalBytes: {$sum: 1}}}"
 Note: To execute the custom agg, you need to add an 'a' parameter to -v
  ```
@@ -102,7 +102,7 @@ Record shape options
 -f aside from arrays and _id add f fields to the record, after the first 3 every third is an integer, every fifth a date, the rest are text.
 -l how many characters to have in the text fields
 --depth The depth of the document to create.
---customtemplate json representation of the document you'd like to dynamically create. You can specify the field name, object type, min/max length of object, # of array elements of the object, and the ability to do nested documents 1 level deep of everything above. Data types currently supported are string, int, date. Below is an example (includes line breaks which may or may not work as an input parameter):
+--customtemplate json representation of the document you'd like to dynamically create. You can specify the field name, object type, min/max length of object, # of array elements of the object, and the ability to do nested documents 1 level deep of everything above. Data types currently supported are string, int, date. Below is an example (includes line breaks which may or may not work as an input parameter and not including escape characters for double quotes):
 {
   firstname: {str:[7,10]},
   nicknames: {str:[3,10,1,2]},
@@ -117,6 +117,28 @@ str:[min,max,array_elements] = min/max length of string and how many array eleme
 str:[min,max,min_array_elements,max_array_elements] = min/max length of string and min/max array elements
 The above applies to all other object types too.
 When you specify "doc", it indicates a nested document containing more base objects and/or array of base objects.
+-fakertemplate json representation of the document you'd like to dynamically create using the faker library found here (https://github.com/DiUS/java-faker). You can call almost any object and it's method from faker allowing java reflection to execute these methods. There are known limitations of the faker integration:
+1. You can only call faker 2 levels deep, e.g. <faker method to get object>.<faker method>. <faker method to get object>.<faker method to get another object>.<faker method> is not allowed.
+2. Methods that pass in parameters are generally not supported. The only edge case that this supports is when you pass in 3 integer parameters, e.g. number.randomDouble(int, int, int).
+3. There is no timestamp faker method at the moment.
+Below is an example (including line breaks and not including escape characters for double quotes). The :# after the faker reflection parameter represents an array max count. 1 means it's a single field. >1 means it's an array. For an array of documents, you can specify an _cnt:# to specify that there will be an array of said documents. If left out, the document will be a single value.
+{
+   multiaddress: {"address.streetAddress":3},
+   singleaddress: {"address.streetAddress":1},
+   singleint: {"number.randomDigit":1},
+   multiint: {"number.randomDigit":3},
+   singlelong: {"number.randomNumber":1},
+   multilong: {"number.randomNumber":3},
+   singlebool: {"bool.bool":1},
+   multibool: {"bool.bool":3},
+   singledbl: {"number.randomDouble(3,0,100)":1},
+   multidbl: {"number.randomDouble(3,0,100)":5},
+   singledt: {"date.birthday":1},
+   multidt: {"date.birthday":3},
+   singledoc: {doc:{type:{"number.randomDigit":1}, val:{"phoneNumber.phoneNumber":1}}},
+   multidocs: {doc:{nm:{"commerce.product_name":1}, price:{"commerce.price":1}, _cnt:3}}
+}
+
 ```
 
 Example
