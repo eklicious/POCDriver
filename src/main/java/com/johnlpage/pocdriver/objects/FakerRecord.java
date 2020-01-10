@@ -349,7 +349,6 @@ public class FakerRecord {
 
         String streetAddress = faker.address().streetAddress(); // 60018 Sawayn Brooks Suite 449
 
-
         Method method = faker.getClass().getDeclaredMethod("address", null);
         Object obj = method.invoke(faker, null);
         method = obj.getClass().getDeclaredMethod("streetAddress", null);
@@ -385,7 +384,7 @@ public class FakerRecord {
         sampleMetastructureJson.append("singledt: {\"date.birthday\":1}, ");
         sampleMetastructureJson.append("multidt: {\"date.birthday\":3}, ");
         sampleMetastructureJson.append("phones: {doc:{type:{\"number.randomDigit\":1}, val:{\"phoneNumber.phoneNumber\":1}}}, ");
-        sampleMetastructureJson.append("productsArray: {doc:{nm:{\"commerce.product_name\":1}, price:{\"commerce.price\":1}, _cnt:3}} ");
+        sampleMetastructureJson.append("productsArray: {doc:{nm:{\"commerce.productName\":1}, price:{\"commerce.price\":1}, _cnt:3}} ");
         sampleMetastructureJson.append("}");
         logger.debug("sampleMetastructureJson: " + sampleMetastructureJson.toString());
 
@@ -398,10 +397,8 @@ public class FakerRecord {
 
         logger.debug("Sample Doc: " + fr.getDoc(1, 1).toJson());
 
-        System.exit(1);
-
         MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb://localhost:27017"));
-        MongoDatabase db = mongoClient.getDatabase("POCDB");
+        MongoDatabase db = mongoClient.getDatabase("temp");
         MongoDatabase admindb = mongoClient.getDatabase("admin");
         Document d = admindb.runCommand(new Document("serverStatus", 1));
         logger.debug(d.toJson());
@@ -413,7 +410,7 @@ public class FakerRecord {
             logger.debug(table);
         }
 
-        MongoCollection<Document> coll = db.getCollection("ek");
+        MongoCollection<Document> coll = db.getCollection("richquery");
 
         coll.insertOne(fr.getDoc(1, 1));
         System.exit(1);
