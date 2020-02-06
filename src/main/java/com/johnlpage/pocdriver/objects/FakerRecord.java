@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 
 /**
  * EK: This is not threadsafe but for the sake of simple load testing, we don't care
+ * Samples can be seen here: https://java-faker.herokuapp.com/
  */
 public class FakerRecord {
     private static final Logger logger = LogManager.getLogger(FakerRecord.class);
